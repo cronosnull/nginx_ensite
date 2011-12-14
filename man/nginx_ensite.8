@@ -18,10 +18,10 @@
 This manual page documents briefly the nginx_ensite and nginx_dissite commands\.
 .
 .P
-nginx_ensite is a script that \fBenables\fR the specified site which is included in a http block within the nginx configuration\. It does this by creating symlinks within \fB/etc/nginx/sites\-enabled\fR\.
+nginx_ensite is a script that \fBenables\fR the specified site which is included in a http block within the nginx configuration\. It does this by creating symlinks within \fB/etc/nginx/sites\-enabled\fR\. If no site is specified, nginx_ensite asks for which site to enable.
 .
 .P
-Likewise, nginx_dissite disables a site by removing those symlinks\. It is not an error to enable a site which is already enabled, or to disable one which is already disabled\.
+Likewise, nginx_dissite disables a site by removing those symlinks\. It is not an error to enable a site which is already enabled, or to disable one which is already disabled\. If no site is specified, nginx_ensite asks for which site to disable.
 .
 .P
 The default site is handled specially: the resulting symlink will be called \fB000\-default\fR in order to be listed first\. Note that listing \(em as done by \fBls\fR \(em orders the files lexicographically\. Nginx loads the files by the OS provided order\. To make sure a specific server configuration is loaded first specify the \fBdefault_server\fR parameter on the \fBlisten\fR \fIhttp://wiki\.nginx\.org/HttpCoreModule#listen\fR directive of that server configuration\.

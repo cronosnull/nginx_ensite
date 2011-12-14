@@ -13,11 +13,13 @@ and nginx\_dissite commands.
 
 nginx\_ensite is a script that **enables** the specified site which is included in a
 http block within the nginx configuration.  It does this by creating
-symlinks within `/etc/nginx/sites-enabled`.
+symlinks within `/etc/nginx/sites-enabled`.  If no site is specified, nginx_ensite 
+asks for which site to enable.
 
 Likewise, nginx\_dissite disables a site by removing those
 symlinks. It is not an error to enable a site which is already
-enabled, or to disable one which is already disabled.  
+enabled, or to disable one which is already disabled.  If no site is specified, 
+nginx_ensite asks for which site to enable.
 
 The default site is handled specially: the resulting symlink will be
 called `000-default` in order to be listed first. Note that listing
