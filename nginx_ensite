@@ -1,10 +1,11 @@
 #!/bin/bash
 
 ### nginx_ensite --- Bash script to enable or disable a site in nginx.
+### Copyright (C) 2011 Cyril Lavier <cyril.lavier@davromaniak.eu>
 
-### Copyright (C) 2010 António P. P. Almeida <appa@perusio.net>
+### Author: Cyril Lavier <cyril.lavier@davromaniak.eu>
 
-### Author: António P. P. Almeida <appa@perusio.net>
+### Based on the work of António P. P. Almeida <appa@perusio.net>
 
 ### Permission is hereby granted, free of charge, to any person obtaining a
 ### copy of this software and associated documentation files (the "Software"),
@@ -41,68 +42,82 @@ SCRIPTNAME=${0##*/}
 
 
 ## Checking the type of action we will perform. Enabling or disabling.
-ACTION=$(echo $SCRIPTNAME | awk '$0 ~ /dissite/ {print "DISABLE"} $0 ~ /ensite/ {print "ENABLE"} $0 !~ /(dis|en)site/ {print "UNKNOWN"}')
+ACTION="UNKNOWN"
+eval `echo "$SCRIPTNAME" | grep -E 'nginx_(en|dis)site' | sed -e 's/nginx_\(.*\)site/ACTION="\U\1ABLE"/' | tr -d '\r\n '`
 
 if [ "$ACTION" == "UNKNOWN" ]; then
-    echo "$SCRIPTNAME: Unknown action!"
-    print_usage
+	echo "$SCRIPTNAME: Unknown action!"
+	exit 1
 fi
 
 
-function print_usage() {
-    echo "$SCRIPTNAME <site name>"
-    exit 1
-}
-
+# Check if the sites-enabled directory exists. If not create it.
+[ -d $ENABLED_SITES_PATH ] || mkdir -p $ENABLED_SITES_PATH
 
 ## Check the number of arguments.
 if [ $# -ne 1 ]; then
-    print_usage
+	case $ACTION in
+		ENABLE)
+			echo -n "Your choices are: "
+			diff <(ls $ENABLED_SITES_PATH) <(ls $AVAILABLE_SITES_PATH) | grep -E '^>' | sed -e "s/^> \(.*\)$/\1/" | tr "\r\n" " "
+			echo -e "\nWhich site do you want to enable ?"
+			read site
+			$0 $site
+			exit $?
+		;;
+		DISABLE)
+			echo -n "Your choices are: "
+			for i in $ENABLED_SITES_PATH/*; do
+				basename $i
+			done | sed -e "s/$/ /g" | tr -d "\r\n" | sed -e "s/ $//"
+			echo -e "\nWhich site do you want to disable ?"
+			read site
+			$0 $site
+			exit $?
+		;;
+	esac
 else
-    SITE_AVAILABLE="$AVAILABLE_SITES_PATH/$1"
-    # Check if the sites-enabled directory exists. If not create it.
-    [ -d $ENABLED_SITES_PATH ] || mkdir -p $ENABLED_SITES_PATH
-    # If enabling the 'default' site then make sure that it's teh
-    # first to be loaded.
-    if [ $1 == "default" ]; then
-        SITE_ENABLED="$ENABLED_SITES_PATH/000-default"
-    else
-        SITE_ENABLED="$ENABLED_SITES_PATH/$1"
-    fi
+	SITE_AVAILABLE="$AVAILABLE_SITES_PATH/$1"
+	# If enabling the 'default' site then make sure that it's teh	
+	# first to be loaded.
+	if [ $1 == "default" ]; then
+		SITE_ENABLED="$ENABLED_SITES_PATH/000-default"
+	else
+		SITE_ENABLED="$ENABLED_SITES_PATH/$1"
+	fi
 fi
-
 
 ## Check that the file corresponding to site exists if enabling or
 ## that the symbolic link exists if disabling. Perform the desired
 ## action if possible. If not signal an error and exit.
 case $ACTION in
-    ENABLE)
-        if [ -r $SITE_AVAILABLE ]; then
-            [ -h $SITE_ENABLED ] || ln -s $SITE_AVAILABLE $SITE_ENABLED
-            ## Test for a well formed configuration.
-            echo "Testing nginx configuration..."
-            $NGINX -t && STATUS=0
-            if [ $STATUS ]; then
-                echo -n "site $1 has been enabled."
-                echo "Run /etc/init.d/nginx reload to apply the changes."
-                exit 0
-            else
-                exit 2
-            fi
-        else
-            echo "Site configuration file $1 not found."
-            exit 3
-        fi
-        ;;
-    DISABLE)
-        if [ -h $SITE_ENABLED ]; then
-            rm $SITE_ENABLED
-            echo "Site $1 has been disabled."
-            echo "Run /etc/init.d/nginx reload to apply the changes."
-            exit 0
-        else
-            echo "Site $1 doesn't exist."
-            exit 3
-        fi
-        ;;
+	ENABLE)
+		if [ -r $SITE_AVAILABLE ]; then
+			[ -h $SITE_ENABLED ] || ln -s $SITE_AVAILABLE $SITE_ENABLED
+			## Test for a well formed configuration.
+			echo "Testing nginx configuration..."
+			$NGINX -t && STATUS=0
+			if [ $STATUS ]; then
+				echo -n "site $1 has been enabled."
+				echo "Run /etc/init.d/nginx reload to apply the changes."
+				exit 0
+			else
+				exit 2
+			fi
+		else
+			echo "Site configuration file $1 not found."
+			exit 3
+		fi
+	;;
+	DISABLE)
+		if [ -h $SITE_ENABLED ]; then
+			rm $SITE_ENABLED
+			echo "Site $1 has been disabled."
+			echo "Run /etc/init.d/nginx reload to apply the changes."
+			exit 0
+		else
+			echo "Site $1 doesn't exist."
+			exit 3
+		fi
+	;;
 esac
