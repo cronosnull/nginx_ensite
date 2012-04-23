@@ -56,12 +56,6 @@ The script is written in Bash and uses some Bash specific idioms. I
 never tested it in other shells. You're welcomed to try it in any other
 shell. Please do tell me how it went. 
 
-It requires also [awk](http://en.wikipedia.org/wiki/AWK). The original
-`awk` (usually called BWK awk) from Bell Labs will do if you don't
-have [gawk](http://www.gnu.org/software/gawk) (Gnu awk).  IN OS X and
-*BSD the former is the default `awk`. The script should work in *BSD,
-OS X and GNU/Linux.
-
 ## Manual pages
 
 Two UNIX manual pages are included in the man directory. They should
@@ -71,5 +65,4 @@ lines of `/usr/share/man/man8` or `/usr/local/share/man/man8`.
 
 ## Acknowledgments
 
-Thanks to [perusio](http://github.com/perusio) for the original script
-script.
+Thanks to [perusio](http://github.com/perusio) for the original script.
