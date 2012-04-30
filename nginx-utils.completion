@@ -1,0 +1,43 @@
+#!/bin/bash
+
+[[ -r "$HOME/.config/nginx-utils" ]] && . "$HOME/.config/nginx-utils"
+ngx_en="${NGX_CONF_DIR:-/etc/nginx}/${NGX_SITES_ENABLED:-sites-enabled}"
+ngx_av="${NGX_CONF_DIR:-/etc/nginx}/${NGX_SITES_AVAILABLE:-sites-available}"
+
+[[ -d "$ngx_en" ]] || exit 1
+[[ -d "$ngx_av" ]] || exit 1
+
+function _ngensite() {
+	local disabled=()
+	local enabled=("$ngx_en"/*)
+	enabled=("${enabled[@]##*/}")
+
+	for site in "$ngx_av"/*; do
+		if [[ "${site##*/}" == "${enabled[0]}" ]]; then
+			unset enabled[0]
+			enabled=("${enabled[@]}")
+		else
+			disabled=("${disabled[@]}" "${site##*/}")
+		fi
+	done
+	COMPREPLY=("$(compgen -W '"${disabled[@]}"' -- ${COMP_WORDS[COMP_CWORD]})")
+}
+
+
+function _ngdissite() {
+	local sites=("$ngx_en"/*)
+	sites=("${sites[@]##*/}")
+	COMPREPLY="$(compgen -W '"${sites[@]}"' -- ${COMP_WORDS[COMP_CWORD]})"
+}
+
+
+function _ngallsites() {
+	local sites=("$ngx_av"/*)
+	sites=("${sites[@]##*/}")
+	COMPREPLY="$(compgen -W '"${sites[@]}"' -- ${COMP_WORDS[COMP_CWORD]})"
+}
+
+complete -F _ngensite ngx-ensite
+complete -F _ngdissite ngx-dissite
+complete -F _ngallsites ngx-site
+complete -F _ngallsites ngx-rmsite

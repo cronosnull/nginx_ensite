@@ -1,0 +1,155 @@
+#!/bin/bash
+
+##
+# nginx_*site -- Shell script to manage Nginx site configurations.
+# Copyright (C) 2012 Michael Lustfield <michaellustfield@ubuntu.com>
+#
+# Author: Michael Lustfield <michaellustfield@ubuntu.com>
+#
+# Based on the work of Cyril Lavier <cyril.lavier@davromaniak.eu>
+# Based on the work of António P. P. Almeida <appa@perusio.net>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# Except as contained in this notice, the name(s) of the above copyright
+# holders shall not be used in advertising or otherwise to promote the sale,
+# use or other dealings in this Software without prior written authorization.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+##
+
+
+[[ -r "$HOME/.config/nginx-utils" ]] && . "$HOME/.config/nginx-utils"
+sites_enabled="${NGX_CONF_DIR:-/etc/nginx}/${NGX_SITES_ENABLED:-sites-enabled}"
+sites_available="${NGX_CONF_DIR:-/etc/nginx}/${NGX_SITES_AVAILABLE:-sites-available}"
+
+warn() {
+	printf '%s\n' "$1"
+}
+
+die() {
+	printf 'ERROR: %s\n' "$1"
+	exit 1
+}
+
+enable_site() {
+	for site in "$@"; do
+		site_available="$sites_available/$site"
+		site_enabled="$sites_enabled/$site"
+		[[ -e "$site_enabled" ]] || warn "Error: $1 already enabled"
+		[[ -r "$site_available" ]] || warn 'Unable to read site to be enabled.'
+		ln -s "$site_available" "$site_enabled"
+	done
+}
+
+disable_site() {
+	for site in "$@"; do
+		site_enabled="$sites_enabled/$site"
+		[[ -h "$site_enabled" ]] || warn "$site_enabled is not a symbolic link. Not removing."
+		rm "$site_enabled"
+	done
+}
+
+edit_site() {
+	[[ -f "$site_available/$1" ]] || die "Available site $1 does not exist."
+	if [[ -x "$(which sensible-editor 2>/dev/null)" ]]; then
+		sensible-editor "$1"
+	elif [[ -x "$(which vi 2>/dev/null)" ]]; then
+		vi "$1"
+	else
+		warn 'Unable to find appropriate editor'
+	fi
+}
+
+rm_site() {
+	for site in "$@"; do
+		read -p "Are you sure you want to permanently remove $1? (y/N)" confirm
+		[[ ! "$confirm" == 'y' && ! "$confirm" == 'Y' ]] && exit
+		rm -f "$sites_available/$site" "$sites_enabled/$site"
+	done
+}
+
+reload_nginx() {
+	nginx -t 2>&1 >/dev/null || warn 'Configuration Error: Please review the enabled sites configuration.'
+	service nginx reload
+}
+
+show_help() {
+	cat <<HELP
+This script is part of a package and provides:
+ngx-ensite <sites>	- Enable site
+			- Create a symlink from sites-available to sites-enabled
+ngx-dissite <sites>	- Disable site
+			- Remove a symlink in sites-enabled
+ngx-edsite <site>	- Edit site configuration
+			- Opens the configuration file in sites-available
+ngx-rmsite <sites>	- Remove site configuration
+			- Deletes the configuration in both site-enabled and sites-available
+ngx-site <opt> <site>	- Using <opt> lets you do the same thing as above
+
+Options:
+	<site>		- The site to be acted on
+			- Tab completion can be used help pick the correct site
+	<sites>		- Multiple sites can me given here
+	-e		- Same as ngx-ensite
+	-d		- Same as ngx-dissite
+	-c		- Same as ngx-edsite
+	-r		- Same as ngx-rmsite
+
+Files:
+	~/.config/nginx-utils - Per-user settings for the nginx-utils package.
+		NGX_CONF_DIR='/etc/nginx'
+			Base Nginx configuration directory
+		NGX_SITES_AVAILABLE='sites-available'
+			Available sites directory (should only contain config files)
+		NGX_SITES_ENABLED='sites-enabled'
+			Enabled sites directory (should only contain symbolic links)
+		NGX_RELOAD_CONF=1
+			If set, the reload command will be sent to nginx after changes are made.
+
+Examples:
+	ngx-ensite domain.tld foo.tld bar.tld
+	ngx-site -e domain.tld
+	ngx-edsite 
+HELP
+}
+
+if [[ ! -d "$sites_enabled" || ! -d "$sites_available" ]]; then
+	warn 'Both a sites-enabled and sites-available directory are required.'
+	exit 1
+fi
+
+case "$(basename "$0")" in
+	*ensite) enable_site "$@";;
+	*dissite) disable_site "$@";;
+	*edsite) edit_site "$1";;
+	*rmsite) rm_site "$@";;
+	*site)
+		while getopts 'e:d:c:r:h' opt; do
+			case "$opt" in
+				e) enable_site "$OPTARG";;
+				d) disable_site "$OPTARG";;
+				c) edit_site "$OPTARG";;
+				r) rm_site "$OPTARG";;
+				h) show_help;;
+				*) show_help;;
+			esac
+		done;;
+	*) show_help;;
+esac
+
+[[ "$NGX_RELOAD_CONF" && -x "$(which nginx)"]] && reload_nginx
