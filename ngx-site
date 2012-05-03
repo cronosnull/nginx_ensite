@@ -46,17 +46,6 @@ die() {
 	exit 1
 }
 
-list_sites() {
-	echo -ne "Available sites :\n"
-	for site in $sites_available/*; do
-		basename $site
-	done
-	echo -ne "\nEnabled sites :\n"
-	for site in $sites_enabled/*; do
-		basename $site
-	done
-}
-
 enable_site() {
 	for site in "$@"; do
 		site_available="$sites_available/$site"
@@ -124,7 +113,6 @@ ngx-edsite <site>	- Edit site configuration
 			- Opens the configuration file in sites-available
 ngx-rmsite <sites>	- Remove site configuration
 			- Deletes the configuration in both site-enabled and sites-available
-ngx-listsite		- Lists the available and enabled sites 
 ngx-site <opt> <site>	- Using <opt> lets you do the same thing as above
 
 Options:
@@ -135,7 +123,6 @@ Options:
 	-d		- Same as ngx-dissite
 	-c		- Same as ngx-edsite
 	-r		- Same as ngx-rmsite
-	-l		- Same as ngx-listsite
 
 Files:
 	~/.config/nginx-utils - Per-user settings for the nginx-utils package.
@@ -165,7 +152,6 @@ case "$(basename "$0")" in
 	*dissite) disable_site "$@";;
 	*edsite) edit_site "$1";;
 	*rmsite) rm_site "$@";;
-	*listsite) list_sites && exit 0;;
 	*site)
 		while getopts 'e:d:c:r:lh' opt; do
 			case "$opt" in
@@ -173,7 +159,6 @@ case "$(basename "$0")" in
 				d) disable_site "$OPTARG";;
 				c) edit_site "$OPTARG";;
 				r) rm_site "$OPTARG";;
-				l) list_sites && exit 0;;
 				h) show_help && exit 0;;
 				*) show_help && exit 0;;
 			esac
