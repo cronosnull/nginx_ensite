@@ -2,11 +2,12 @@
 
 ##
 # nginx_*site -- Shell script to manage Nginx site configurations.
-# Copyright (C) 2012 Michael Lustfield <michaellustfield@ubuntu.com>
+# Copyright (C) 2012 Michael Lustfield <michaellustfield@ubuntu.com>,
+#                    Cyril Lavier <cyril.lavier@davromaniak.eu>
 #
-# Author: Michael Lustfield <michaellustfield@ubuntu.com>
+# Authors: Michael Lustfield <michaellustfield@ubuntu.com>
+#          Cyril Lavier <cyril.lavier@davromaniak.eu>
 #
-# Based on the work of Cyril Lavier <cyril.lavier@davromaniak.eu>
 # Based on the work of António P. P. Almeida <appa@perusio.net>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -32,7 +33,6 @@
 # DEALINGS IN THE SOFTWARE.
 ##
 
-
 [[ -r "$HOME/.config/nginx-utils" ]] && . "$HOME/.config/nginx-utils"
 sites_enabled="${NGX_CONF_DIR:-/etc/nginx}/${NGX_SITES_ENABLED:-sites-enabled}"
 sites_available="${NGX_CONF_DIR:-/etc/nginx}/${NGX_SITES_AVAILABLE:-sites-available}"
@@ -46,13 +46,27 @@ die() {
 	exit 1
 }
 
+list_sites() {
+	echo -ne "Available sites :\n"
+	for site in $sites_available/*; do
+		basename $site
+	done
+	echo -ne "\nEnabled sites :\n"
+	for site in $sites_enabled/*; do
+		basename $site
+	done
+}
+
 enable_site() {
 	for site in "$@"; do
 		site_available="$sites_available/$site"
 		site_enabled="$sites_enabled/$site"
-		[[ -e "$site_enabled" ]] || warn "Error: $1 already enabled"
+		[[ -e "$site_enabled" ]] && warn "Error: $1 already enabled"
 		[[ -r "$site_available" ]] || warn 'Unable to read site to be enabled.'
-		ln -s "$site_available" "$site_enabled"
+		ln -s "$site_available" "$site_enabled" && (
+			echo "Site $site succesfully enabled"
+			[[ "$NGX_RELOAD_CONF" ]] || (review_conf && echo "Run \"service nginx reload\" to apply the changes.")
+		)
 	done
 }
 
@@ -60,7 +74,10 @@ disable_site() {
 	for site in "$@"; do
 		site_enabled="$sites_enabled/$site"
 		[[ -h "$site_enabled" ]] || warn "$site_enabled is not a symbolic link. Not removing."
-		rm "$site_enabled"
+		rm "$site_enabled" && (
+			echo "Site $site succesfully disabled"
+			[[ "$NGX_RELOAD_CONF" ]] || (review_conf && echo "Run \"service nginx reload\" to apply the changes.")
+		)
 	done
 }
 
@@ -83,9 +100,17 @@ rm_site() {
 	done
 }
 
+review_conf() {
+	nginx -t >/dev/null 2>&1 || (
+		errmsg=$(nginx -t 2>&1 | sed -e "s/$/\\\n/" | tr -d "\r\n")
+		echo 'Configuration Error: Please review the enabled sites configuration before reloading NGINX.'
+		echo -e 'Error message is : \n-----\n'$errmsg'-----'
+		exit 1
+	) && echo "Configuration OK"
+}
+
 reload_nginx() {
-	nginx -t 2>&1 >/dev/null || warn 'Configuration Error: Please review the enabled sites configuration.'
-	service nginx reload
+	review_conf && service nginx reload
 }
 
 show_help() {
@@ -99,6 +124,7 @@ ngx-edsite <site>	- Edit site configuration
 			- Opens the configuration file in sites-available
 ngx-rmsite <sites>	- Remove site configuration
 			- Deletes the configuration in both site-enabled and sites-available
+ngx-listsite		- Lists the available and enabled sites 
 ngx-site <opt> <site>	- Using <opt> lets you do the same thing as above
 
 Options:
@@ -109,6 +135,7 @@ Options:
 	-d		- Same as ngx-dissite
 	-c		- Same as ngx-edsite
 	-r		- Same as ngx-rmsite
+	-l		- Same as ngx-listsite
 
 Files:
 	~/.config/nginx-utils - Per-user settings for the nginx-utils package.
@@ -138,18 +165,20 @@ case "$(basename "$0")" in
 	*dissite) disable_site "$@";;
 	*edsite) edit_site "$1";;
 	*rmsite) rm_site "$@";;
+	*listsite) list_sites && exit 0;;
 	*site)
-		while getopts 'e:d:c:r:h' opt; do
+		while getopts 'e:d:c:r:lh' opt; do
 			case "$opt" in
 				e) enable_site "$OPTARG";;
 				d) disable_site "$OPTARG";;
 				c) edit_site "$OPTARG";;
 				r) rm_site "$OPTARG";;
-				h) show_help;;
-				*) show_help;;
+				l) list_sites && exit 0;;
+				h) show_help && exit 0;;
+				*) show_help && exit 0;;
 			esac
 		done;;
 	*) show_help;;
 esac
 
-[[ "$NGX_RELOAD_CONF" && -x "$(which nginx)"]] && reload_nginx
+[[ "$NGX_RELOAD_CONF" && -x "$(which nginx)" ]] && reload_nginx
