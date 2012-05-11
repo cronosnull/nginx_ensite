@@ -71,11 +71,14 @@ disable_site() {
 }
 
 edit_site() {
-	[[ -f "$site_available/$1" ]] || die "Available site $1 does not exist."
+	for site in $@; do
+		[[ -f "$sites_available/$site" ]] || die "Available site $site does not exist."
+		edits=$edits" "$sites_available/$site
+	done
 	if [[ -x "$(which sensible-editor 2>/dev/null)" ]]; then
-		sensible-editor "$1"
+		sensible-editor $edits
 	elif [[ -x "$(which vi 2>/dev/null)" ]]; then
-		vi "$1"
+		vi $edits
 	else
 		warn 'Unable to find appropriate editor'
 	fi
@@ -83,7 +86,7 @@ edit_site() {
 
 rm_site() {
 	for site in "$@"; do
-		read -p "Are you sure you want to permanently remove $1? (y/N)" confirm
+		read -p "Are you sure you want to permanently remove $site? (y/N)" confirm
 		[[ ! "$confirm" == 'y' && ! "$confirm" == 'Y' ]] && exit
 		rm -f "$sites_available/$site" "$sites_enabled/$site"
 	done
@@ -150,7 +153,7 @@ fi
 case "$(basename "$0")" in
 	*ensite) enable_site "$@";;
 	*dissite) disable_site "$@";;
-	*edsite) edit_site "$1";;
+	*edsite) edit_site "$@";;
 	*rmsite) rm_site "$@";;
 	*site)
 		while getopts 'e:d:c:r:lh' opt; do
