@@ -85,10 +85,37 @@ edit_site() {
 }
 
 rm_site() {
+	if [$# -lt 1]; then 
+		echo "Debe seleccionar uno de los sitios existentes para borrar:"
+		ls_site
+	fi
 	for site in "$@"; do
 		read -p "Are you sure you want to permanently remove $site? (y/N)" confirm
 		[[ ! "$confirm" == 'y' && ! "$confirm" == 'Y' ]] && exit
 		rm -f "$sites_available/$site" "$sites_enabled/$site"
+	done
+}
+helpls(){
+cat <<HELP
+Shows the available/enabled/disabled sites in nginx:
+	-a available
+	-d disabled
+	-e enabled
+HELP
+}
+ls_site(){
+	if [ ( $# -lt 1 ) || (( $# -eq 1 ) && ($1 -eq "-l"))]; then 
+		echo "avaliable!"
+		ls "$sites_available"
+	fi
+	while getopts 'aedh' opt; do 
+		echo "$opt"
+		case "$opt" in
+			e)ls "$sites_enabled";;
+			d)comm -13 <(ls "$sites_enabled") <(ls "$sites_available");;
+			h)helpls;;
+			a|*)ls "$sites_available";;
+		esac
 	done
 }
 
@@ -155,6 +182,7 @@ case "$(basename "$0")" in
 	*dissite) disable_site "$@";;
 	*edsite) edit_site "$@";;
 	*rmsite) rm_site "$@";;
+	*lssites) ls_site "$@";;
 	*site)
 		while getopts 'e:d:c:r:lh' opt; do
 			case "$opt" in
@@ -162,6 +190,7 @@ case "$(basename "$0")" in
 				d) disable_site "$OPTARG";;
 				c) edit_site "$OPTARG";;
 				r) rm_site "$OPTARG";;
+				l) ls_site "$@" && exit 0;;
 				h) show_help && exit 0;;
 				*) show_help && exit 0;;
 			esac
