@@ -3,6 +3,7 @@
 ## Description
 
 This is a collection of shell (Bash) script to manage nginx virtual hosts
+The createServerProxy script creates a new proxy "server block" (virtual host) in sites-available folder.
 
 ## Installation 
 

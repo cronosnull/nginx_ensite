@@ -1,0 +1,14 @@
+server{
+        ##listen
+        ##server_name  ##serverName;
+        location /{
+		proxy_pass ##url;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header Host $host;
+		##timeout proxy_read_timeout ##tm;
+	        ##timeout proxy_connect_timeout ##tm;
+	}
+	location = / {
+        	##rewrite ^ http://$host/##folder/ permanent;
+	}
+}
