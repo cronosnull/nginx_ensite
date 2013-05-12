@@ -60,7 +60,7 @@ if [[ -n "$LISTEN" ]]; then
 	sed -i "s¬##listen¬listen  $LISTEN¬g" "$sites_available/$NAME"
 fi
 if [[ -n "$TIMEOUT" ]]; then 
-	sed -i "s¬##timeout¬timeout¬g" "$sites_available/$NAME"
+	sed -i "s¬##timeout¬ ¬g" "$sites_available/$NAME"
 	sed -i "s¬##tm¬$TIMEOUT¬g" "$sites_available/$NAME"
 fi
 
