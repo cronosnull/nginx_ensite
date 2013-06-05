@@ -104,7 +104,7 @@ Shows the available/enabled/disabled sites in nginx:
 HELP
 }
 ls_site(){
-	if [[ ( "$#" -lt 1 ) || (( "$#" -eq 1 ) && ($1 -eq "-l"))]]; then 
+	if [[ ( "$#" -lt 1 ) || (( "$#" -eq 1 ) && ("$1" == "-l"))]]; then 
 		echo "avaliable!"
 		ls "$sites_available"
 	fi
